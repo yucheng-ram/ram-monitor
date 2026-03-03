@@ -1,9 +1,7 @@
 name: Test RAM Monitor
 
 on:
-  schedule:
-    - cron: '0 1 * * *'   # 每天 1點跑一次
-  workflow_dispatch:       # 也可以手動跑
+  workflow_dispatch:
 
 jobs:
   build:
@@ -11,5 +9,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: pip install requests
+
       - name: Run test.py
         run: python test.py
