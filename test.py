@@ -4,7 +4,7 @@ import os
 webhook_url = os.environ["DISCORD_WEBHOOK"]
 
 message = {
-    "content": "✅ RAM Monitor 雲端測試成功！"
+    "content": "✅今天系統運作正常，時間是 XXX"
 }
 
 response = requests.post(webhook_url, json=message)
