@@ -15,3 +15,5 @@ jobs:
 
       - name: Run test.py
         run: python test.py
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
