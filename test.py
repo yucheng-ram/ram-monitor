@@ -1,54 +1,50 @@
 import os
 import requests
+from bs4 import BeautifulSoup
 
 webhook_url = os.environ["DISCORD_WEBHOOK"]
 
 KEYWORD = "GW2790Q"
 TARGET_PRICE = 3799
 
-url = "https://ecapi.momoshop.com.tw/search/v1/search"
+url = f"https://www.momoshop.com.tw/search/searchShop.jsp?keyword={KEYWORD}"
 
-params = {
-    "q": KEYWORD,
-    "page": 1,
-    "sort": "sale/dc"
+headers = {
+    "User-Agent": "Mozilla/5.0"
 }
 
-response = requests.get(url, params=params)
-data = response.json()
+response = requests.get(url, headers=headers)
+html = response.text
 
-products = data.get("products", [])
+soup = BeautifulSoup(html, "html.parser")
 
-results = []
+products = soup.select(".listArea li")
 
-# 遍歷前 10 項結果
-for p in products[:10]:
-    name = p.get("name","")
-    price = p.get("price",0)
-    link = p.get("url", "")
+found = False
+message = ""
 
-    # 確保價格是數字
-    try:
-        price_int = int(price)
-    except:
-        price_int = 9999999
+for item in products[:10]:
+    name_tag = item.select_one(".prdName")
+    price_tag = item.select_one(".price")
 
-    results.append({
-        "name": name,
-        "price": price_int,
-        "link": link
-    })
+    if name_tag and price_tag:
+        name = name_tag.text.strip()
 
-message = "💡 MOMO 搜尋結果：\n"
-notify_flag = False
+        price_text = price_tag.text.strip().replace(",", "")
+        price_numbers = ''.join(filter(str.isdigit, price_text))
 
-for item in results:
-    if item["price"] <= TARGET_PRICE:
-        notify_flag = True
-        message += f"\n🎯 {item['name']}\n價格: {item['price']}\n連結: {item['link']}\n"
+        if price_numbers:
+            price = int(price_numbers)
 
-if not notify_flag:
-    message = f"⚠️ {KEYWORD} 價格沒有低於 {TARGET_PRICE}"
+            if price <= TARGET_PRICE:
+                found = True
+                link_tag = item.select_one("a")
+                link = "https://www.momoshop.com.tw" + link_tag["href"]
+                message += f"\n🎯 {name}\n價格: {price}\n{link}\n"
+
+if not found:
+    message = f"⚠️ {KEYWORD} 沒有低於 {TARGET_PRICE}"
 
 requests.post(webhook_url, json={"content": message})
+
 print("Done")
