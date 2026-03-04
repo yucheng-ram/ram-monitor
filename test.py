@@ -20,10 +20,9 @@ soup = BeautifulSoup(html, "html.parser")
 
 products = soup.select(".listArea li")
 
-found = False
-message = ""
+message = f"📊 MOMO 搜尋：{KEYWORD}\n\n"
 
-for item in products[:10]:
+for item in products[:5]:
     name_tag = item.select_one(".prdName")
     price_tag = item.select_one(".price")
 
@@ -36,14 +35,13 @@ for item in products[:10]:
         if price_numbers:
             price = int(price_numbers)
 
-            if price <= TARGET_PRICE:
-                found = True
-                link_tag = item.select_one("a")
-                link = "https://www.momoshop.com.tw" + link_tag["href"]
-                message += f"\n🎯 {name}\n價格: {price}\n{link}\n"
+            link_tag = item.select_one("a")
+            link = "https://www.momoshop.com.tw" + link_tag["href"]
 
-if not found:
-    message = f"⚠️ {KEYWORD} 沒有低於 {TARGET_PRICE}"
+            if price <= TARGET_PRICE:
+                message += f"🎯 {name}\n價格: {price}\n{link}\n\n"
+            else:
+                message += f"📌 {name}\n價格: {price}\n{link}\n\n"
 
 requests.post(webhook_url, json={"content": message})
 
