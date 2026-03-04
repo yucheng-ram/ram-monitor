@@ -16,9 +16,18 @@ headers = {
 response = requests.get(url, headers=headers)
 html = response.text
 
+# ====== DEBUG 區 ======
+print("====== HTML 前 2000 字 ======")
+print(html[:2000])
+print("====== HTML 結束 ======")
+# ======================
+
 soup = BeautifulSoup(html, "html.parser")
 
-products = soup.select(".listArea li")
+# 先嘗試新版 selector
+products = soup.select("ul#itemList li")
+
+print("抓到商品數量:", len(products))
 
 message = f"📊 MOMO 搜尋：{KEYWORD}\n\n"
 
