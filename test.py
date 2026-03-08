@@ -1,35 +1,77 @@
 import os
+import json
 import requests
 
 webhook_url = os.environ["DISCORD_WEBHOOK"]
 
-KEYWORD = "GW2790Q"
 TARGET_PRICE = 3799
 
-url = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
+# 監控商品
+KEYWORDS = [
+    "GW2790Q",
+    "DDR4 16GB",
+]
 
-params = {
-    "q": KEYWORD,
-    "page": 1,
-    "sort": "sale/dc"
-}
+API_URL = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
 
-response = requests.get(url, params=params)
-data = response.json()
+# 讀取歷史價格
+try:
+    with open("price_history.json", "r") as f:
+        history = json.load(f)
+except:
+    history = {}
 
-message = f"📊 PChome 搜尋：{KEYWORD}\n\n"
+message = "🛒 每日價格監控報告\n\n"
 
-for item in data["prods"][:5]:
+for keyword in KEYWORDS:
 
-    name = item["name"]
-    price = item["price"]
-    link = f"https://24h.pchome.com.tw/prod/{item['Id']}"
+    params = {
+        "q": keyword,
+        "page": 1,
+        "sort": "sale/dc"
+    }
 
-    if price <= TARGET_PRICE:
-        message += f"🎯 {name}\n價格: {price}\n{link}\n\n"
-    else:
-        message += f"📌 {name}\n價格: {price}\n{link}\n\n"
+    r = requests.get(API_URL, params=params)
+    data = r.json()
 
+    message += f"🔎 {keyword}\n"
+
+    for item in data["prods"][:3]:
+
+        name = item["name"]
+        price = item["price"]
+        pid = item["Id"]
+
+        link = f"https://24h.pchome.com.tw/prod/{pid}"
+
+        # 歷史最低價
+        if pid not in history:
+            history[pid] = price
+
+        lowest = history[pid]
+
+        if price < lowest:
+            history[pid] = price
+            lowest = price
+
+        # emoji
+        if price <= TARGET_PRICE:
+            icon = "🎯"
+        else:
+            icon = "📦"
+
+        message += (
+            f"{icon} {name}\n"
+            f"💰 現價: {price}\n"
+            f"📉 最低: {lowest}\n"
+            f"{link}\n\n"
+        )
+
+# 存歷史
+with open("price_history.json", "w") as f:
+    json.dump(history, f)
+
+# 發送 Discord
 requests.post(webhook_url, json={"content": message})
 
 print("Done")
