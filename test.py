@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup
 webhook_url = os.environ["DISCORD_WEBHOOK"]
 
 KEYWORD = "GW2790Q"
-TARGET_PRICE = 3799
 
 url = f"https://m.momoshop.com.tw/search.momo?searchKeyword={KEYWORD}"
 
@@ -14,31 +13,19 @@ headers = {
 }
 
 response = requests.get(url, headers=headers)
-soup = BeautifulSoup(response.text, "html.parser")
 
-products = soup.select(".goodsItemLi")
+print("status:", response.status_code)
 
-message = f"📊 MOMO 搜尋：{KEYWORD}\n\n"
+html = response.text
 
-for item in products[:5]:
+print("==== HTML 前1000字 ====")
+print(html[:1000])
+print("==== END ====")
 
-    name = item.select_one(".prdName")
-    price = item.select_one(".price")
+soup = BeautifulSoup(html, "html.parser")
 
-    if name and price:
+products = soup.select("li")
 
-        name_text = name.text.strip()
+print("抓到 li 數量:", len(products))
 
-        price_text = price.text.strip().replace(",", "")
-        price_number = int(''.join(filter(str.isdigit, price_text)))
-
-        link = "https://m.momoshop.com.tw" + item.select_one("a")["href"]
-
-        if price_number <= TARGET_PRICE:
-            message += f"🎯 {name_text}\n價格: {price_number}\n{link}\n\n"
-        else:
-            message += f"📌 {name_text}\n價格: {price_number}\n{link}\n\n"
-
-requests.post(webhook_url, json={"content": message})
-
-print("Done")
+requests.post(webhook_url, json={"content": f"測試完成: li={len(products)}"})
