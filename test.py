@@ -4,17 +4,15 @@ import requests
 
 webhook_url = os.environ["DISCORD_WEBHOOK"]
 
-TARGET_PRICE = 3799
+API_URL = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
 
 # 監控商品
 KEYWORDS = [
     "GW2790Q",
-    "DDR4 16GB",
+    "DDR5 5600 16GB"
 ]
 
-API_URL = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
-
-# 讀取歷史價格
+# 讀歷史
 try:
     with open("price_history.json", "r") as f:
         history = json.load(f)
@@ -34,7 +32,7 @@ for keyword in KEYWORDS:
     r = requests.get(API_URL, params=params)
     data = r.json()
 
-    message += f"🔎 {keyword}\n"
+    message += f"🔎 **{keyword}**\n\n"
 
     for item in data["prods"][:3]:
 
@@ -44,30 +42,49 @@ for keyword in KEYWORDS:
 
         link = f"https://24h.pchome.com.tw/prod/{pid}"
 
-        # 歷史最低價
+        change_text = ""
+
         if pid not in history:
-            history[pid] = price
+            history[pid] = {
+                "lowest": price,
+                "last": price
+            }
+            change_text = "🆕 新商品"
 
-        lowest = history[pid]
-
-        if price < lowest:
-            history[pid] = price
-            lowest = price
-
-        # emoji
-        if price <= TARGET_PRICE:
-            icon = "🎯"
         else:
-            icon = "📦"
+
+            last_price = history[pid]["last"]
+
+            if price < last_price:
+                diff = last_price - price
+                change_text = f"⬇️ 降價 {diff}"
+
+            elif price > last_price:
+                diff = price - last_price
+                change_text = f"⬆️ 漲價 {diff}"
+
+            history[pid]["last"] = price
+
+            if price < history[pid]["lowest"]:
+                history[pid]["lowest"] = price
+
+        lowest = history[pid]["lowest"]
 
         message += (
-            f"{icon} {name}\n"
-            f"💰 現價: {price}\n"
+            f"📦 {name}\n"
+            f"💰 現價: **{price}**\n"
             f"📉 最低: {lowest}\n"
-            f"{link}\n\n"
         )
 
-# 存歷史
+        if change_text:
+            message += f"{change_text}\n"
+
+        message += f"{link}\n\n"
+
+    message += "----------------------\n\n"
+
+
+# 存回歷史
 with open("price_history.json", "w") as f:
     json.dump(history, f)
 
