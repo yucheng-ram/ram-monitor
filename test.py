@@ -1,31 +1,35 @@
 import os
 import requests
-from bs4 import BeautifulSoup
 
 webhook_url = os.environ["DISCORD_WEBHOOK"]
 
 KEYWORD = "GW2790Q"
+TARGET_PRICE = 3799
 
-url = f"https://m.momoshop.com.tw/search.momo?searchKeyword={KEYWORD}"
+url = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
 
-headers = {
-    "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X)"
+params = {
+    "q": KEYWORD,
+    "page": 1,
+    "sort": "sale/dc"
 }
 
-response = requests.get(url, headers=headers)
+response = requests.get(url, params=params)
+data = response.json()
 
-print("status:", response.status_code)
+message = f"📊 PChome 搜尋：{KEYWORD}\n\n"
 
-html = response.text
+for item in data["prods"][:5]:
 
-print("==== HTML 前1000字 ====")
-print(html[:1000])
-print("==== END ====")
+    name = item["name"]
+    price = item["price"]
+    link = f"https://24h.pchome.com.tw/prod/{item['Id']}"
 
-soup = BeautifulSoup(html, "html.parser")
+    if price <= TARGET_PRICE:
+        message += f"🎯 {name}\n價格: {price}\n{link}\n\n"
+    else:
+        message += f"📌 {name}\n價格: {price}\n{link}\n\n"
 
-products = soup.select("li")
+requests.post(webhook_url, json={"content": message})
 
-print("抓到 li 數量:", len(products))
-
-requests.post(webhook_url, json={"content": f"測試完成: li={len(products)}"})
+print("Done")
