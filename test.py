@@ -79,7 +79,7 @@ for keyword in KEYWORDS:
         if change_text:
             message += f"{change_text}\n"
 
-        message += f"{link}\n\n"
+        message += f"🔗 <{link}>\n\n"
 
     message += "----------------------\n\n"
 
