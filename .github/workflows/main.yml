@@ -15,7 +15,11 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4
 
-      - name: Run test.py
+      - name: Run hardware monitor
         run: python test.py
+
+      - name: Run stock monitor
+        run: python stock.py
+        
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
