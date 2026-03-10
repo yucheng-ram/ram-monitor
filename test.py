@@ -8,7 +8,7 @@ API_URL = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
 
 # 監控商品
 KEYWORDS = [
-    "GW2790Q",
+    "GW2790Q 2K",
     "DDR5 5600 16GB"
 ]
 
