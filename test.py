@@ -1,94 +1,90 @@
-import os
-import json
 import requests
+import os
 
-webhook_url = os.environ["DISCORD_WEBHOOK"]
+webhook = os.environ["DISCORD_WEBHOOK"]
 
-API_URL = "https://ecshweb.pchome.com.tw/search/v3.3/all/results"
+headers = {
+    "User-Agent": "Mozilla/5.0"
+}
 
-# 監控商品
-KEYWORDS = [
+def pchome_search(keyword):
+    url = f"https://ecshweb.pchome.com.tw/search/v3.3/all/results?q={keyword}"
+    r = requests.get(url, headers=headers).json()
+
+    if r["prods"]:
+        item = r["prods"][0]
+        return item["price"], "https://24h.pchome.com.tw/prod/" + item["Id"]
+
+    return None, None
+
+
+def yahoo_search(keyword):
+    url = f"https://tw.buy.yahoo.com/search/product?p={keyword}"
+    r = requests.get(url, headers=headers)
+
+    if "price" in r.text:
+        import re
+        price = re.search(r'"price":(\d+)', r.text)
+        if price:
+            return int(price.group(1)), url
+
+    return None, None
+
+
+def books_search(keyword):
+    url = f"https://search.books.com.tw/search/query/key/{keyword}"
+    r = requests.get(url, headers=headers)
+
+    import re
+    price = re.search(r'(\d{3,5})元', r.text)
+
+    if price:
+        return int(price.group(1)), url
+
+    return None, None
+
+
+def check_product(keyword):
+
+    prices = []
+
+    p_price, p_link = pchome_search(keyword)
+    y_price, y_link = yahoo_search(keyword)
+    b_price, b_link = books_search(keyword)
+
+    report = f"\n🔎 {keyword}\n"
+
+    if p_price:
+        report += f"PChome：{p_price}\n"
+        prices.append(("PChome", p_price, p_link))
+
+    if y_price:
+        report += f"Yahoo：{y_price}\n"
+        prices.append(("Yahoo", y_price, y_link))
+
+    if b_price:
+        report += f"博客來：{b_price}\n"
+        prices.append(("博客來", b_price, b_link))
+
+    if prices:
+        best = min(prices, key=lambda x: x[1])
+        report += f"\n🏆 今日最低價：{best[0]} {best[1]}\n"
+        report += f"🔗 <{best[2]}>\n"
+
+    else:
+        report += "沒有找到商品\n"
+
+    return report
+
+
+products = [
     "GW2790Q 2K",
     "DDR5 5600 16GB"
 ]
 
-# 讀歷史
-try:
-    with open("price_history.json", "r") as f:
-        history = json.load(f)
-except:
-    history = {}
+message = "📊 每日硬體價格監控\n"
 
-message = "🛒 每日價格監控報告\n\n"
+for p in products:
+    message += check_product(p)
 
-for keyword in KEYWORDS:
-
-    params = {
-        "q": keyword,
-        "page": 1,
-        "sort": "sale/dc"
-    }
-
-    r = requests.get(API_URL, params=params)
-    data = r.json()
-
-    message += f"🔎 **{keyword}**\n\n"
-
-    for item in data["prods"][:3]:
-
-        name = item["name"]
-        price = item["price"]
-        pid = item["Id"]
-
-        link = f"https://24h.pchome.com.tw/prod/{pid}"
-
-        change_text = ""
-
-        if pid not in history:
-            history[pid] = {
-                "lowest": price,
-                "last": price
-            }
-            change_text = "🆕 新商品"
-
-        else:
-
-            last_price = history[pid]["last"]
-
-            if price < last_price:
-                diff = last_price - price
-                change_text = f"⬇️ 降價 {diff}"
-
-            elif price > last_price:
-                diff = price - last_price
-                change_text = f"⬆️ 漲價 {diff}"
-
-            history[pid]["last"] = price
-
-            if price < history[pid]["lowest"]:
-                history[pid]["lowest"] = price
-
-        lowest = history[pid]["lowest"]
-
-        message += (
-            f"📦 {name}\n"
-            f"💰 現價: **{price}**\n"
-            f"📉 最低: {lowest}\n"
-        )
-
-        if change_text:
-            message += f"{change_text}\n"
-
-        message += f"🔗 <{link}>\n\n"
-
-    message += "----------------------\n\n"
-
-
-# 存回歷史
-with open("price_history.json", "w") as f:
-    json.dump(history, f)
-
-# 發送 Discord
-requests.post(webhook_url, json={"content": message})
-
-print("Done")
+requests.post(webhook, json={"content": message})
